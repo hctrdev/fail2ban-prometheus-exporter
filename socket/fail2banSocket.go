@@ -5,7 +5,13 @@ import (
 	"github.com/kisielk/og-rek"
 	"github.com/nlpodyssey/gopickle/types"
 	"net"
+	"net/http"
+	"net/url"
 	"strings"
+	"slices"
+	"maps"
+	"encoding/json"
+	"io/ioutil"
 )
 
 type Fail2BanSocket struct {
@@ -18,6 +24,22 @@ type JailStats struct {
 	FailedTotal   int
 	BannedCurrent int
 	BannedTotal   int
+}
+
+type GeoIP struct {
+	IP          string  `json:"Ip"`
+	Network     string  `json:"Network"`
+	GeoID       int     `json:"GeoId"`
+	CountryCode string  `json:"CountryCode"`
+	CountryName string  `json:"CountryName"`
+	CityName    string  `json:"CityName"`
+	Lat         float64 `json:"Lat"`
+	Lon         float64 `json:"Lon"`
+	Count       int
+}
+
+type GeoIPList struct {
+	City []GeoIP `json:"city"`
 }
 
 func ConnectToSocket(path string) (*Fail2BanSocket, error) {
@@ -176,4 +198,80 @@ func trimSpaceForAll(slice []string) []string {
 		slice[i] = strings.TrimSpace(slice[i])
 	}
 	return slice
+}
+
+func (s *Fail2BanSocket) GetBanned(GeoIpApiUrl string) ([]*GeoIP, error) {
+	response, err := s.sendCommand([]string{bannedCommand})
+	if err != nil {
+		return nil, err
+	}
+
+	var (
+		ips    map[string]bool
+		geos   map[int]*GeoIP
+		result []*GeoIP
+	)
+
+	ips = make(map[string]bool)
+	geos = make(map[int]*GeoIP)
+
+	if lvl1, ok := response.(*types.Tuple); ok {
+		if lvl2, ok := lvl1.Get(1).(*types.List); ok {
+			for jail := 0; jail < lvl2.Len(); jail++ {
+				if lvl3, ok := lvl2.Get(jail).(*types.Dict); ok {
+					jail_name := lvl3.Keys()[0]
+					if lvl4, ok := lvl3.Get(jail_name); ok {
+						if lvl5, ok := lvl4.(*types.List); ok {
+							for i := 0; i < lvl5.Len(); i++ {
+								ips[lvl5.Get(i).(string)] = true
+							}
+						}
+					}
+				}
+			}
+
+			var reshttp *http.Response
+			ips2 := slices.Collect(maps.Keys(ips))
+			reshttp, err = http.PostForm(GeoIpApiUrl, url.Values{"ips": {strings.Join(ips2[:], ",")}})
+			if err != nil {
+				fmt.Println(err)
+				return nil, newBadFormatError(bannedCommand, response)
+			}
+			defer reshttp.Body.Close()
+
+			var body []byte
+			body, err = ioutil.ReadAll(reshttp.Body)
+			if err != nil {
+				fmt.Println(err)
+				return nil, newBadFormatError(bannedCommand, response)
+			}
+
+			var geolist GeoIPList
+			err = json.Unmarshal(body, &geolist)
+			if err != nil {
+				fmt.Println(err)
+				return nil, newBadFormatError(bannedCommand, response)
+			}
+
+			if len(geolist.City) > 0 {
+				for i, _ := range geolist.City {
+					var geoip GeoIP
+					geoip = geolist.City[i]
+					geoip.Count = 0
+
+					if _, ok := geos[geoip.GeoID]; !ok {
+							geos[geoip.GeoID] = &geoip
+					}
+					geos[geoip.GeoID].Count++
+				}
+
+				for geoid := range geos {
+					result = append(result, geos[geoid])
+				}
+				return result, nil
+			}
+		}
+	}
+
+	return nil, newBadFormatError(bannedCommand, response)
 }

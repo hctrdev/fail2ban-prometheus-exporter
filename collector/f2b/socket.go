@@ -4,6 +4,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"gitlab.com/hectorjsmith/fail2ban-prometheus-exporter/socket"
 	"log"
+	"strconv"
 )
 
 const (
@@ -65,6 +66,11 @@ var (
 		prometheus.BuildFQName(namespace, "", "version"),
 		"Version of the exporter and fail2ban server",
 		[]string{"exporter", "fail2ban"}, nil,
+	)
+	metricBannedGeo = prometheus.NewDesc(
+		prometheus.BuildFQName(namespace, "", "banned_ip_per_geo"),
+		"Number of IP banned per geo location",
+		[]string{"country", "city", "latitude", "longitude"}, nil,
 	)
 )
 
@@ -176,4 +182,24 @@ func (c *Collector) collectVersionMetric(ch chan<- prometheus.Metric, s *socket.
 	ch <- prometheus.MustNewConstMetric(
 		metricVersionInfo, prometheus.GaugeValue, float64(1), c.exporterVersion, fail2banVersion,
 	)
+}
+
+func (c *Collector) collectBannedMetrics(ch chan<- prometheus.Metric, s *socket.Fail2BanSocket) {
+
+	if c.GeoIpApiUrl == "" {
+		return
+	}
+
+	bans, err := s.GetBanned(c.GeoIpApiUrl)
+	if err != nil {
+		c.socketRequestErrorCount++
+		log.Print(err)
+	}
+	if err == nil {
+		for _, ban := range bans {
+			ch <- prometheus.MustNewConstMetric(
+				metricBannedGeo, prometheus.GaugeValue, float64(ban.Count), ban.CountryCode, ban.CityName, strconv.FormatFloat(ban.Lat, 'f', -1, 64), strconv.FormatFloat(ban.Lon, 'f', -1, 64),
+			)
+		}
+	}
 }

@@ -15,6 +15,7 @@ const (
 	banTimeCommandFmt    = "get %s bantime"
 	findTimeCommandFmt   = "get %s findtime"
 	maxRetriesCommandFmt = "get %s maxretry"
+	bannedCommand        = "banned"
 	socketReadBufferSize = 1024
 )
 

@@ -10,4 +10,5 @@ type AppSettings struct {
 	FileCollectorPath     string
 	AuthProvider          auth.AuthProvider
 	ExitOnSocketConnError bool
+	GeoIpApiUrl           string
 }

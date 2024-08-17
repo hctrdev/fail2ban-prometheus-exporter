@@ -15,6 +15,7 @@ var cliStruct struct {
 	ServerAddress        string `name:"web.listen-address" env:"F2B_WEB_LISTEN_ADDRESS" help:"Address to use for the metrics server" default:"${default_address}"`
 	F2bSocketPath        string `name:"collector.f2b.socket" env:"F2B_COLLECTOR_SOCKET" help:"Path to the fail2ban server socket" default:"${default_socket}"`
 	ExitOnSocketError    bool   `name:"collector.f2b.exit-on-socket-connection-error" env:"F2B_EXIT_ON_SOCKET_CONN_ERROR" help:"When set to true the exporter will immediately exit on a fail2ban socket connection error"`
+	GeoIpApiUrl          string `name:"collector.geoip-api.url" env:"F2B_COLLECTOR_GEOIP_API_URL" help:"URL to GeoIP API server"`
 	TextFileExporterPath string `name:"collector.textfile.directory" env:"F2B_COLLECTOR_TEXT_PATH" help:"Directory to read text files with metrics from"`
 	BasicAuthUser        string `name:"web.basic-auth.username" env:"F2B_WEB_BASICAUTH_USER" help:"Username to use to protect endpoints with basic auth"`
 	BasicAuthPass        string `name:"web.basic-auth.password" env:"F2B_WEB_BASICAUTH_PASS" help:"Password to use to protect endpoints with basic auth"`
@@ -40,6 +41,7 @@ func Parse() *AppSettings {
 		Fail2BanSocketPath:    cliStruct.F2bSocketPath,
 		FileCollectorPath:     cliStruct.TextFileExporterPath,
 		ExitOnSocketConnError: cliStruct.ExitOnSocketError,
+		GeoIpApiUrl:           cliStruct.GeoIpApiUrl,
 		AuthProvider:          createAuthProvider(),
 	}
 	return settings
