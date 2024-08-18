@@ -113,7 +113,7 @@ Just import the contents of this file into a new Grafana dashboard to get starte
 
 The dashboard supports displaying data from multiple exporters. Use the `instance` dashboard variable to select which ones to display.
 
-*(Sample dashboard is compatible with Grafana `9.1.8` and above)*
+*(Sample dashboard is compatible with Grafana `9.1.8` and above, however for better performance on GeoMaps, version 11 and above is recommended)*
 
 ## 3. Configuration
 
@@ -165,7 +165,7 @@ If both are specified, the CLI flag takes precedence.
 | `F2B_WEB_BASICAUTH_USER`        | `--web.basic-auth.username`                       |
 | `F2B_WEB_BASICAUTH_PASS`        | `--web.basic-auth.password`                       |
 | `F2B_EXIT_ON_SOCKET_CONN_ERROR` | `--collector.f2b.exit-on-socket-connection-error` |
-| `$F2B_COLLECTOR_GEOIP_API_URL`  | `--collector.geoip-api.url`                       |
+| `F2B_COLLECTOR_GEOIP_API_URL`   | `--collector.geoip-api.url`                       |
 
 ## 4. Building from source
 
