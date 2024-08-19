@@ -103,7 +103,11 @@ Status for the jail: sshd
    `- Banned IP list:   ...
 ```
 
-The metric `banned_ip_per_geo` correspond to the result of the `fail2ban-client banned` command. For this metric to work, it is necessary to implement a [GeoIP server](https://github.com/nikokio/geoip-server) and use the `--collector.geoip-api.url` flag.
+The metric `banned_ip_per_geo` corresponds to the result of the `fail2ban-client banned` command. For this metric to work, it is required:
+
+  - to use **fail2ban 0.11.2 minimum**
+  - to implement a [GeoIP server](https://github.com/nikokio/geoip-server)
+  - to use the `--collector.geoip-api.url` flag (ex. `--collector.geoip-api.url=http://mygeoip-server.domain.tld/city`)
 
 ### 2.1. Grafana
 
