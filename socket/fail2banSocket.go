@@ -200,6 +200,25 @@ func trimSpaceForAll(slice []string) []string {
 	return slice
 }
 
+/* banned command returns the following structure :
+ *  [
+ *    {
+ *      'jail1': [
+ *        'ip11',
+ *        '...',
+ *        'ip1N'
+ *      ]
+ *    }, {
+ *      ...
+ *    }, {
+ *      'jailN': [
+ *        'ipN1',
+ *        '...',
+ *        'ipNN'
+ *      ]
+ *    }
+ *  ]
+*/
 func (s *Fail2BanSocket) GetBanned(GeoIpApiUrl string) ([]*GeoIP, error) {
 	response, err := s.sendCommand([]string{bannedCommand})
 	if err != nil {
@@ -207,21 +226,28 @@ func (s *Fail2BanSocket) GetBanned(GeoIpApiUrl string) ([]*GeoIP, error) {
 	}
 
 	var (
-		ips    map[string]bool
-		geos   map[int]*GeoIP
+		ips    map[string]bool  // A temporary map to store a list of unique IPs
+		geos   map[int]*GeoIP   // A temporary map to store a list of unique locations
 		result []*GeoIP
 	)
 
 	ips = make(map[string]bool)
 	geos = make(map[int]*GeoIP)
 
+	// Response is a Tuple (status, data)
 	if lvl1, ok := response.(*types.Tuple); ok {
+		// Get list of jails
 		if lvl2, ok := lvl1.Get(1).(*types.List); ok {
+			// Iterate over each jail
 			for jail := 0; jail < lvl2.Len(); jail++ {
+				// Get dict of current jail
 				if lvl3, ok := lvl2.Get(jail).(*types.Dict); ok {
+					// Dict contains a single key which is the jail name
 					jail_name := lvl3.Keys()[0]
+					// Get list of IPs banned for current jail
 					if lvl4, ok := lvl3.Get(jail_name); ok {
 						if lvl5, ok := lvl4.(*types.List); ok {
+							// Iterate over each IP and store them in the temporary IP map for dedupe
 							for i := 0; i < lvl5.Len(); i++ {
 								ips[lvl5.Get(i).(string)] = true
 							}
@@ -230,6 +256,7 @@ func (s *Fail2BanSocket) GetBanned(GeoIpApiUrl string) ([]*GeoIP, error) {
 				}
 			}
 
+			// Join all IPs into a single string with comma as separator and call the GeoIP server API
 			var reshttp *http.Response
 			ips2 := slices.Collect(maps.Keys(ips))
 			reshttp, err = http.PostForm(GeoIpApiUrl, url.Values{"ips": {strings.Join(ips2[:], ",")}})
@@ -239,6 +266,7 @@ func (s *Fail2BanSocket) GetBanned(GeoIpApiUrl string) ([]*GeoIP, error) {
 			}
 			defer reshttp.Body.Close()
 
+			// Read returned body
 			var body []byte
 			body, err = ioutil.ReadAll(reshttp.Body)
 			if err != nil {
@@ -246,6 +274,7 @@ func (s *Fail2BanSocket) GetBanned(GeoIpApiUrl string) ([]*GeoIP, error) {
 				return nil, newBadFormatError(bannedCommand, response)
 			}
 
+			// Map received JSON data to internal structure
 			var geolist GeoIPList
 			err = json.Unmarshal(body, &geolist)
 			if err != nil {
@@ -254,20 +283,26 @@ func (s *Fail2BanSocket) GetBanned(GeoIpApiUrl string) ([]*GeoIP, error) {
 			}
 
 			if len(geolist.City) > 0 {
+				// Iterate over each Geo result
 				for i, _ := range geolist.City {
 					var geoip GeoIP
 					geoip = geolist.City[i]
 					geoip.Count = 0
 
+					// If this GeoID has not be seen yet, we add it to the result
 					if _, ok := geos[geoip.GeoID]; !ok {
 							geos[geoip.GeoID] = &geoip
 					}
+
+					// Increment the counter for this GeoID
 					geos[geoip.GeoID].Count++
 				}
 
+				// Transpose the temporary Geo map to a final Geo list
 				for geoid := range geos {
 					result = append(result, geos[geoid])
 				}
+
 				return result, nil
 			}
 		}
