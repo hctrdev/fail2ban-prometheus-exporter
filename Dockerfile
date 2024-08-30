@@ -1,4 +1,4 @@
-FROM golang:1.20-buster AS build
+FROM golang:1.23-buster AS build
 
 # Create build workspace folder
 WORKDIR /workspace
