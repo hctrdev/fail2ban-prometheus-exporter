@@ -24,7 +24,7 @@ COPY --from=build /workspace/fail2ban_exporter /app
 
 # Setup a healthcheck
 COPY health /app/health
-RUN apk add curl
+RUN apk add curl && chmod +x /app/health
 HEALTHCHECK --interval=10s --timeout=4s --retries=3 CMD /app/health
 
 ENTRYPOINT ["/app/fail2ban_exporter"]
