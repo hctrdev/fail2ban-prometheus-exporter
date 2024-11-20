@@ -56,8 +56,8 @@ release:
     - if: $CI_COMMIT_TAG =~ /^v.*$/
   script: |
     docker run --rm --privileged \
-      -v $PWD:/go/src/gitlab.com/hectorjsmith/fail2ban-prometheus-exporter \
-      -w /go/src/gitlab.com/hectorjsmith/fail2ban-prometheus-exporter \
+      -v $PWD:/go/src/gitlab.com/hctrdev/fail2ban-prometheus-exporter \
+      -w /go/src/gitlab.com/hctrdev/fail2ban-prometheus-exporter \
       -v /var/run/docker.sock:/var/run/docker.sock \
       -e DOCKER_USERNAME -e DOCKER_PASSWORD -e DOCKER_REGISTRY  \
       -e GITLAB_TOKEN \

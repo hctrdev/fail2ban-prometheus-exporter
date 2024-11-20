@@ -1,6 +1,6 @@
 [Unit]
 Description=Fail2ban metric exporter for Prometheus
-Documentation=https://gitlab.com/hectorjsmith/fail2ban-prometheus-exporter/-/blob/main/README.md
+Documentation=https://gitlab.com/hctrdev/fail2ban-prometheus-exporter/-/blob/main/README.md
 Requires=network-online.target
 After=network-online.target
 
