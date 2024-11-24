@@ -37,6 +37,10 @@ func main() {
 	log.Printf("fail2ban exporter version %s", version)
 	log.Printf("starting server at %s", appSettings.MetricsAddress)
 
+	if appSettings.GeoIpApiUrl != "" {
+		log.Printf("Geo API URL at %s", appSettings.GeoIpApiUrl)
+	}
+
 	f2bCollector := f2b.NewExporter(appSettings, version)
 	prometheus.MustRegister(f2bCollector)
 

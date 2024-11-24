@@ -16,6 +16,7 @@ type Collector struct {
 	socketConnectionErrorCount int
 	socketRequestErrorCount    int
 	exitOnSocketConnError      bool
+	GeoIpApiUrl                string
 }
 
 func NewExporter(appSettings *cfg.AppSettings, exporterVersion string) *Collector {
@@ -28,6 +29,7 @@ func NewExporter(appSettings *cfg.AppSettings, exporterVersion string) *Collecto
 		socketConnectionErrorCount: 0,
 		socketRequestErrorCount:    0,
 		exitOnSocketConnError:      appSettings.ExitOnSocketConnError,
+		GeoIpApiUrl:                appSettings.GeoIpApiUrl,
 	}
 }
 
@@ -39,6 +41,7 @@ func (c *Collector) Describe(ch chan<- *prometheus.Desc) {
 	ch <- metricJailBannedCurrent
 	ch <- metricJailBannedTotal
 	ch <- metricErrorCount
+	ch <- metricBannedGeo
 }
 
 func (c *Collector) Collect(ch chan<- prometheus.Metric) {
@@ -56,6 +59,7 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) {
 	c.collectServerUpMetric(ch, s)
 	if err == nil && s != nil {
 		c.collectJailMetrics(ch, s)
+		c.collectBannedMetrics(ch, s)
 		c.collectVersionMetric(ch, s)
 	}
 	c.collectErrorCountMetric(ch)

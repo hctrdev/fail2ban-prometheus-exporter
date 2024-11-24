@@ -73,21 +73,22 @@ The exporter exposes the following metrics:
 
 *All metric names are prefixed with `f2b_`*
 
-| Metric                       | Description                                                                        | Example                                             |
-|------------------------------|------------------------------------------------------------------------------------|-----------------------------------------------------|
-| `up`                         | Returns 1 if the exporter is up and running                                        | `f2b_up 1`                                          |
-| `errors`                     | Count the number of errors since startup by type                                   |                                                     |
-| `errors{type="socket_conn"}` | Errors connecting to the fail2ban socket (e.g. connection refused)                 | `f2b_errors{type="socket_conn"} 0`                  |
-| `errors{type="socket_req"}`  | Errors sending requests to the fail2ban server (e.g. invalid responses)            | `f2b_errors{type="socket_req"} 0`                   |
-| `jail_count`                 | Number of jails configured in fail2ban                                             | `f2b_jail_count 2`                                  |
-| `jail_banned_current`        | Number of IPs currently banned per jail                                            | `f2b_jail_banned_current{jail="sshd"} 15`           |
-| `jail_banned_total`          | Total number of banned IPs since fail2ban startup per jail (includes expired bans) | `f2b_jail_banned_total{jail="sshd"} 31`             |
-| `jail_failed_current`        | Number of current failures per jail                                                | `f2b_jail_failed_current{jail="sshd"} 6`            |
-| `jail_failed_total`          | Total number of failures since fail2ban startup per jail                           | `f2b_jail_failed_total{jail="sshd"} 125`            |
-| `jail_config_ban_time`       | How long an IP is banned for in this jail (in seconds)                             | `f2b_config_jail_ban_time{jail="sshd"} 600`         |
-| `jail_config_find_time`      | How far back the filter will look for failures in this jail (in seconds)           | `f2b_config_jail_find_time{jail="sshd"} 600`        |
-| `jail_config_max_retry`      | The max number of failures allowed before banning an IP in this jail               | `f2b_config_jail_max_retries{jail="sshd"} 5`        |
-| `version`                    | Version string of the exporter and fail2ban                                        | `f2b_version{exporter="0.5.0",fail2ban="0.11.1"} 1` |
+| Metric                       | Description                                                                        | Example                                                                                         |
+|------------------------------|------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------|
+| `up`                         | Returns 1 if the exporter is up and running                                        | `f2b_up 1`                                                                                      |
+| `errors`                     | Count the number of errors since startup by type                                   |                                                                                                 |
+| `errors{type="socket_conn"}` | Errors connecting to the fail2ban socket (e.g. connection refused)                 | `f2b_errors{type="socket_conn"} 0`                                                              |
+| `errors{type="socket_req"}`  | Errors sending requests to the fail2ban server (e.g. invalid responses)            | `f2b_errors{type="socket_req"} 0`                                                               |
+| `jail_count`                 | Number of jails configured in fail2ban                                             | `f2b_jail_count 2`                                                                              |
+| `jail_banned_current`        | Number of IPs currently banned per jail                                            | `f2b_jail_banned_current{jail="sshd"} 15`                                                       |
+| `jail_banned_total`          | Total number of banned IPs since fail2ban startup per jail (includes expired bans) | `f2b_jail_banned_total{jail="sshd"} 31`                                                         |
+| `jail_failed_current`        | Number of current failures per jail                                                | `f2b_jail_failed_current{jail="sshd"} 6`                                                        |
+| `jail_failed_total`          | Total number of failures since fail2ban startup per jail                           | `f2b_jail_failed_total{jail="sshd"} 125`                                                        |
+| `jail_config_ban_time`       | How long an IP is banned for in this jail (in seconds)                             | `f2b_config_jail_ban_time{jail="sshd"} 600`                                                     |
+| `jail_config_find_time`      | How far back the filter will look for failures in this jail (in seconds)           | `f2b_config_jail_find_time{jail="sshd"} 600`                                                    |
+| `jail_config_max_retry`      | The max number of failures allowed before banning an IP in this jail               | `f2b_config_jail_max_retries{jail="sshd"} 5`                                                    |
+| `version`                    | Version string of the exporter and fail2ban                                        | `f2b_version{exporter="0.5.0",fail2ban="0.11.1"} 1`                                             |
+| `banned_ip_per_geo`          | Geolocation of currently banned IPs                                                | `f2b_banned_ip_per_geo{city="Clifton", country="US", latitude="40.8364", longitude="-74.1403"}` |
 
 The metrics above correspond to the matching fields in the `fail2ban-client status <jail>` command:
 ```
@@ -102,6 +103,12 @@ Status for the jail: sshd
    `- Banned IP list:   ...
 ```
 
+The metric `banned_ip_per_geo` corresponds to the result of the `fail2ban-client banned` command. For this metric to work, it is required:
+
+  - to use **fail2ban 0.11.2 minimum**
+  - to implement a [GeoIP server](https://github.com/nikokio/geoip-server)
+  - to use the `--collector.geoip-api.url` flag (ex. `--collector.geoip-api.url=http://mygeoip-server.domain.tld/city`)
+
 ### 2.1. Grafana
 
 The metrics exported by this tool are compatible with Prometheus and Grafana.
@@ -110,7 +117,7 @@ Just import the contents of this file into a new Grafana dashboard to get starte
 
 The dashboard supports displaying data from multiple exporters. Use the `instance` dashboard variable to select which ones to display.
 
-*(Sample dashboard is compatible with Grafana `9.1.8` and above)*
+*(Sample dashboard is compatible with Grafana `9.1.8` and above, however for better performance on GeoMaps, version 11 and above is recommended)*
 
 ## 3. Configuration
 
@@ -144,6 +151,9 @@ Flags:
       --web.basic-auth.password=STRING
                                       Password to use to protect endpoints with basic auth
                                       ($F2B_WEB_BASICAUTH_PASS)
+      --collector.geoip-api.url=STRING
+                                      URL to GeoIP API server
+                                      ($F2B_COLLECTOR_GEOIP_API_URL)
 ```
 
 **Environment variables**
@@ -159,11 +169,12 @@ If both are specified, the CLI flag takes precedence.
 | `F2B_WEB_BASICAUTH_USER`        | `--web.basic-auth.username`                       |
 | `F2B_WEB_BASICAUTH_PASS`        | `--web.basic-auth.password`                       |
 | `F2B_EXIT_ON_SOCKET_CONN_ERROR` | `--collector.f2b.exit-on-socket-connection-error` |
+| `F2B_COLLECTOR_GEOIP_API_URL`   | `--collector.geoip-api.url`                       |
 
 ## 4. Building from source
 
 Building from source has the following dependencies:
-- Go v1.20
+- Go v1.23
 - Make
 
 From there, simply run `make build`
